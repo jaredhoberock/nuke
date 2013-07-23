@@ -1,5 +1,17 @@
 #pragma once
 
+#include <cstddef> // for size_t
+
+#ifndef __host__
+#define __host__
+#define NUKE_UNDEF_HOST
+#endif
+
+#ifndef __device__
+#define __device__
+#define NUKE_UNDEF_DEVICE
+#endif
+
 namespace nuke
 {
 
@@ -16,7 +28,7 @@ template<typename Result>
 struct enable_if<true,Result>
 {
   typedef Result type;
-}
+};
 
 
 template<typename Integer32>
@@ -45,7 +57,7 @@ __host__ __device__
 typename enable_if<
   sizeof(Integer64) == 8
 >::type
-atomic_store_n(Integer64 *x, Integer32 y)
+atomic_store_n(Integer64 *x, Integer64 y)
 {
 #if defined(__CUDA_ARCH__)
   atomicExch(x, y);
@@ -64,15 +76,15 @@ atomic_store_n(Integer64 *x, Integer32 y)
 template<typename Integer32>
 __host__ __device__
 typename enable_if<
-  Sizeof(Integer32) == 4,
+  sizeof(Integer32) == 4,
   Integer32
 >::type
-atomic_load_n(Integer32 *x)
+atomic_load_n(const Integer32 *x)
 {
 #if defined(__CUDA_ARCH__)
-  return atomicAdd(x, Integer32(0));
+  return atomicAdd(const_cast<Integer32*>(x), Integer32(0));
 #elif defined(__GNUC__)
-  return atomic_load_n(x, __ATOMIC_SEQ_CST);
+  return __atomic_load_n(x, __ATOMIC_SEQ_CST);
 #elif defined(_MSC_VER)
   return InterlockedExchangeAdd(x, Integer32(0));
 #elif defined(__clang__)
@@ -86,13 +98,13 @@ atomic_load_n(Integer32 *x)
 template<typename Integer64>
 __host__ __device__
 typename enable_if<
-  Sizeof(Integer64) == 8,
+  sizeof(Integer64) == 8,
   Integer64
 >::type
-atomic_load_n(Integer64 *x)
+atomic_load_n(const Integer64 *x)
 {
 #if defined(__CUDA_ARCH__)
-  return atomicAdd(x, Integer64(0));
+  return atomicAdd(const_cast<Integer64*>(x), Integer64(0));
 #elif defined(__GNUC__)
   return atomic_load_n(x, __ATOMIC_SEQ_CST);
 #elif defined(_MSC_VER)
@@ -110,7 +122,7 @@ atomic_load_n(Integer64 *x)
 template<typename Integer32>
 __host__ __device__
 typename enable_if<
-  sizeof(Integer) == 4,
+  sizeof(Integer32) == 4,
   Integer32
 >::type
 atomic_fetch_add(Integer32 *x, Integer32 y)
@@ -135,7 +147,7 @@ typename enable_if<
   sizeof(Integer64) == 8,
   Integer64
 >::type
-atomic_fetch_add(Integer64 *x, Integer32 y)
+atomic_fetch_add(Integer64 *x, Integer64 y)
 {
 #if defined(__CUDA_ARCH__)
   return atomicAdd(x, y);
@@ -179,7 +191,7 @@ typename enable_if<
   sizeof(Integer64) == 8,
   Integer64
 >::type
-atomic_fetch_sub(Integer64 *x, Integer32 y)
+atomic_fetch_sub(Integer64 *x, Integer64 y)
 {
 #if defined(__CUDA_ARCH__)
   return atomicSub(x, y);
@@ -198,7 +210,14 @@ atomic_fetch_sub(Integer64 *x, Integer32 y)
 template<typename Integer>
 class atomic_base
 {
+  private:
+    typedef Integer int_type;
+
   public:
+    __host__ __device__
+    atomic_base()
+    {}
+
     __host__ __device__
     atomic_base(int_type i)
       : x(i)
@@ -269,7 +288,7 @@ class atomic_base
     }
 
     __host__ __device__
-    int_type operator-- volatile
+    int_type operator--() volatile
     {
       // return atomic_sub_fetch(&x, 1);
       return operator--(0) - int_type(1);
@@ -323,16 +342,15 @@ class atomic_base
       return detail::atomic_load_n(&x);
     }
 
-  private:
-    typedef Integer int_type;
-
-    int_type x;
-
+  protected:
     atomic_base(const atomic_base &);
 
     atomic_base &operator=(const atomic_base&);
 
     atomic_base &operator=(const atomic_base&) volatile;
+
+  private:
+    int_type x;
 };
 
 
@@ -358,7 +376,7 @@ template<typename T> class atomic;
 
 
 template<>
-class atomic<int> : atomic_int
+class atomic<int> : public atomic_int
 {
   private:
     typedef atomic_int super_t;
@@ -371,6 +389,9 @@ class atomic<int> : atomic_int
 
   public:
     __host__ __device__
+    atomic() : super_t() {}
+
+    __host__ __device__
     atomic(int x) : super_t(x) {}
 
     using super_t::operator int;
@@ -380,7 +401,7 @@ class atomic<int> : atomic_int
 
 
 template<>
-class atomic<unsigned int> : atomic_uint
+class atomic<unsigned int> : public atomic_uint
 {
   private:
     typedef atomic_uint super_t;
@@ -393,6 +414,9 @@ class atomic<unsigned int> : atomic_uint
 
   public:
     __host__ __device__
+    atomic() : super_t() {}
+
+    __host__ __device__
     atomic(unsigned int x) : super_t(x) {}
 
     using super_t::operator unsigned int;
@@ -402,7 +426,7 @@ class atomic<unsigned int> : atomic_uint
 
 
 template<>
-class atomic<long> : atomic_long
+class atomic<long> : public atomic_long
 {
   private:
     typedef atomic_long super_t;
@@ -415,6 +439,9 @@ class atomic<long> : atomic_long
 
   public:
     __host__ __device__
+    atomic() : super_t() {}
+
+    __host__ __device__
     atomic(long x) : super_t(x) {}
 
     using super_t::operator long;
@@ -424,7 +451,7 @@ class atomic<long> : atomic_long
 
 
 template<>
-class atomic<unsigned long> : atomic_ulong
+class atomic<unsigned long> : public atomic_ulong
 {
   private:
     typedef atomic_ulong super_t;
@@ -437,6 +464,9 @@ class atomic<unsigned long> : atomic_ulong
 
   public:
     __host__ __device__
+    atomic() : super_t() {}
+
+    __host__ __device__
     atomic(unsigned long x) : super_t(x) {}
 
     using super_t::operator unsigned long;
@@ -446,7 +476,7 @@ class atomic<unsigned long> : atomic_ulong
 
 
 template<>
-class atomic<long long> : atomic_llong
+class atomic<long long> : public atomic_llong
 {
   private:
     typedef atomic_llong super_t;
@@ -459,6 +489,9 @@ class atomic<long long> : atomic_llong
 
   public:
     __host__ __device__
+    atomic() : super_t() {}
+
+    __host__ __device__
     atomic(long long x) : super_t(x) {}
 
     using super_t::operator long long;
@@ -468,7 +501,7 @@ class atomic<long long> : atomic_llong
 
 
 template<>
-class atomic<unsigned long long> : atomic_ullong
+class atomic<unsigned long long> : public atomic_ullong
 {
   private:
     typedef atomic_ullong super_t;
@@ -481,6 +514,9 @@ class atomic<unsigned long long> : atomic_ullong
 
   public:
     __host__ __device__
+    atomic() : super_t() {}
+
+    __host__ __device__
     atomic(unsigned long long x) : super_t(x) {}
 
     using super_t::operator unsigned long long;
@@ -489,27 +525,17 @@ class atomic<unsigned long long> : atomic_ullong
 };
 
 
-template<>
-class atomic<size_t> : atomic_size_t
-{
-  private:
-    typedef atomic_size_t super_t;
-
-    atomic(const atomic &);
-
-    atomic &operator=(const atomic&);
-
-    atomic &operator=(const atomic&) volatile;
-
-  public:
-    __host__ __device__
-    atomic(size_t x) : super_t(x) {}
-
-    using super_t::operator size_t;
-
-    using super_t::operator=;
-};
-
-
 } // end nuke
+
+
+#ifdef NUKE_UNDEF_HOST
+#undef __host__
+#undef NUKE_UNDEF_HOST
+#endif
+
+
+#ifdef NUKE_UNDEF_DEVICE
+#undef __device__
+#undef NUKE_UNDEF_DEVICE
+#endif
 
