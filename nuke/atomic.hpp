@@ -36,7 +36,7 @@ __host__ __device__
 typename enable_if<
   sizeof(Integer32) == 4
 >::type
-atomic_store_n(Integer32 *x, Integer32 y)
+atomic_store(Integer32 *x, Integer32 y)
 {
 #if defined(__CUDA_ARCH__)
   atomicExch(x, y);
@@ -57,7 +57,7 @@ __host__ __device__
 typename enable_if<
   sizeof(Integer64) == 8
 >::type
-atomic_store_n(Integer64 *x, Integer64 y)
+atomic_store(Integer64 *x, Integer64 y)
 {
 #if defined(__CUDA_ARCH__)
   atomicExch(x, y);
@@ -79,7 +79,7 @@ typename enable_if<
   sizeof(Integer32) == 4,
   Integer32
 >::type
-atomic_load_n(const Integer32 *x)
+atomic_load(const Integer32 *x)
 {
 #if defined(__CUDA_ARCH__)
   return atomicAdd(const_cast<Integer32*>(x), Integer32(0));
@@ -101,7 +101,7 @@ typename enable_if<
   sizeof(Integer64) == 8,
   Integer64
 >::type
-atomic_load_n(const Integer64 *x)
+atomic_load(const Integer64 *x)
 {
 #if defined(__CUDA_ARCH__)
   return atomicAdd(const_cast<Integer64*>(x), Integer64(0));
@@ -207,6 +207,138 @@ atomic_fetch_sub(Integer64 *x, Integer64 y)
 }
 
 
+template<typename Integer32>
+__host__ __device__
+typename enable_if<
+  sizeof(Integer32) == 4,
+  Integer32
+>::type
+atomic_fetch_and(Integer32 *x, Integer32 y)
+{
+#if defined(__CUDA_ARCH__)
+  return atomicAnd(x, y);
+#elif defined(__GNUC__)
+  return __atomic_fetch_and(x, y, __ATOMIC_SEQ_CST);
+#elif defined(_MSC_VER)
+  return InterlockedAnd(x, y);
+#elif defined(__clang__)
+  return __c11_atomic_fetch_and(x, y)
+#else
+#error "No atomic_fetch_and implementation."
+#endif
+}
+
+
+template<typename Integer64>
+__host__ __device__
+typename enable_if<
+  sizeof(Integer64) == 8,
+  Integer64
+>::type
+atomic_fetch_and(Integer64 *x, Integer64 y)
+{
+#if defined(__CUDA_ARCH__)
+  return atomicAnd(x, y);
+#elif defined(__GNUC__)
+  return __atomic_fetch_and(x, y, __ATOMIC_SEQ_CST);
+#elif defined(_MSC_VER)
+  return InterlockedAnd64(x, y);
+#elif defined(__clang__)
+  return __c11_atomic_fetch_and(x, y)
+#else
+#error "No atomic_fetch_and implementation."
+#endif
+}
+
+
+template<typename Integer32>
+__host__ __device__
+typename enable_if<
+  sizeof(Integer32) == 4,
+  Integer32
+>::type
+atomic_fetch_or(Integer32 *x, Integer32 y)
+{
+#if defined(__CUDA_ARCH__)
+  return atomicOr(x, y);
+#elif defined(__GNUC__)
+  return __atomic_fetch_or(x, y, __ATOMIC_SEQ_CST);
+#elif defined(_MSC_VER)
+  return InterlockedOr(x, y);
+#elif defined(__clang__)
+  return __c11_atomic_fetch_or(x, y)
+#else
+#error "No atomic_fetch_or implementation."
+#endif
+}
+
+
+template<typename Integer64>
+__host__ __device__
+typename enable_if<
+  sizeof(Integer64) == 8,
+  Integer64
+>::type
+atomic_fetch_or(Integer64 *x, Integer64 y)
+{
+#if defined(__CUDA_ARCH__)
+  return atomicOr(x, y);
+#elif defined(__GNUC__)
+  return __atomic_fetch_or(x, y, __ATOMIC_SEQ_CST);
+#elif defined(_MSC_VER)
+  return InterlockedOr64(x, y);
+#elif defined(__clang__)
+  return __c11_atomic_fetch_or(x, y)
+#else
+#error "No atomic_fetch_or implementation."
+#endif
+}
+
+
+template<typename Integer32>
+__host__ __device__
+typename enable_if<
+  sizeof(Integer32) == 4,
+  Integer32
+>::type
+atomic_fetch_xor(Integer32 *x, Integer32 y)
+{
+#if defined(__CUDA_ARCH__)
+  return atomicOr(x, y);
+#elif defined(__GNUC__)
+  return __atomic_fetch_xor(x, y, __ATOMIC_SEQ_CST);
+#elif defined(_MSC_VER)
+  return InterlockedOr(x, y);
+#elif defined(__clang__)
+  return __c11_atomic_fetch_xor(x, y)
+#else
+#error "No atomic_fetch_xor implementation."
+#endif
+}
+
+
+template<typename Integer64>
+__host__ __device__
+typename enable_if<
+  sizeof(Integer64) == 8,
+  Integer64
+>::type
+atomic_fetch_xor(Integer64 *x, Integer64 y)
+{
+#if defined(__CUDA_ARCH__)
+  return atomicOr(x, y);
+#elif defined(__GNUC__)
+  return __atomic_fetch_xor(x, y, __ATOMIC_SEQ_CST);
+#elif defined(_MSC_VER)
+  return InterlockedOr64(x, y);
+#elif defined(__clang__)
+  return __c11_atomic_fetch_xor(x, y)
+#else
+#error "No atomic_fetch_xor implementation."
+#endif
+}
+
+
 template<typename Integer>
 class atomic_base
 {
@@ -233,6 +365,90 @@ class atomic_base
     operator int_type() const volatile
     {
       return load();
+    }
+
+    __host__ __device__
+    int_type fetch_add(int_type i)
+    {
+      return detail::atomic_fetch_add(&x, i);
+    }
+
+    __host__ __device__
+    int_type fetch_add(int_type i) volatile
+    {
+      return detail::atomic_fetch_add(const_cast<int_type*>(&x), i);
+    }
+
+    __host__ __device__
+    int_type fetch_sub(int_type i)
+    {
+      return detail::atomic_fetch_sub(&x, i);
+    }
+
+    __host__ __device__
+    int_type fetch_sub(int_type i) volatile
+    {
+      return detail::atomic_fetch_sub(const_cast<int_type*>(&x), i);
+    }
+
+    __host__ __device__
+    int_type fetch_and(int_type i)
+    {
+      return detail::atomic_fetch_and(&x, i);
+    }
+
+    __host__ __device__
+    int_type fetch_and(int_type i) volatile
+    {
+      return detail::atomic_fetch_and(const_cast<int_type*>(&x), i);
+    }
+
+    __host__ __device__
+    int_type fetch_or(int_type i)
+    {
+      return detail::atomic_fetch_or(&x, i);
+    }
+
+    __host__ __device__
+    int_type fetch_or(int_type i) volatile
+    {
+      return detail::atomic_fetch_or(const_cast<int_type*>(&x), i);
+    }
+
+    __host__ __device__
+    int_type fetch_xor(int_type i)
+    {
+      return detail::atomic_fetch_xor(&x, i);
+    }
+
+    __host__ __device__
+    int_type fetch_xor(int_type i) volatile
+    {
+      return detail::atomic_fetch_xor(const_cast<int_type*>(&x), i);
+    }
+
+    __host__ __device__
+    void store(int_type i)
+    {
+      detail::atomic_store(&x, i);
+    }
+
+    __host__ __device__
+    void store(int_type i) volatile
+    {
+      detail::atomic_store(const_cast<int_type*>(&x), i);
+    }
+
+    __host__ __device__
+    int_type load() const
+    {
+      return detail::atomic_load(&x);
+    }
+
+    __host__ __device__
+    int_type load() const volatile
+    {
+      return detail::atomic_load(&x);
     }
 
     __host__ __device__
@@ -295,51 +511,63 @@ class atomic_base
     }
 
     __host__ __device__
-    int_type fetch_add(int_type i)
+    int_type operator+=(int_type val)
     {
-      return detail::atomic_fetch_add(&x, i);
+      return fetch_add(val) + val;
     }
 
     __host__ __device__
-    int_type fetch_add(int_type i) volatile
+    int_type operator+=(int_type val) volatile
     {
-      return detail::atomic_fetch_add(const_cast<int_type*>(&x), i);
+      return fetch_add(val) + val;
     }
 
     __host__ __device__
-    int_type fetch_sub(int_type i)
+    int_type operator-=(int_type val)
     {
-      return detail::atomic_fetch_sub(&x, i);
+      return fetch_sub(val) + val;
     }
 
     __host__ __device__
-    int_type fetch_sub(int_type i) volatile
+    int_type operator-=(int_type val) volatile
     {
-      return detail::atomic_fetch_sub(const_cast<int_type*>(&x), i);
+      return fetch_sub(val) + val;
     }
 
     __host__ __device__
-    void store(int_type i)
+    int_type operator&=(int_type val)
     {
-      detail::atomic_store_n(&x, i);
+      return fetch_and(val) + val;
     }
 
     __host__ __device__
-    void store(int_type i) volatile
+    int_type operator&=(int_type val) volatile
     {
-      detail::atomic_store_n(const_cast<int_type*>(&x), i);
+      return fetch_and(val) + val;
     }
 
     __host__ __device__
-    int_type load() const
+    int_type operator|=(int_type val)
     {
-      return detail::atomic_load_n(&x);
+      return fetch_or(val) + val;
     }
 
     __host__ __device__
-    int_type load() const volatile
+    int_type operator|=(int_type val) volatile
     {
-      return detail::atomic_load_n(&x);
+      return fetch_or(val) + val;
+    }
+
+    __host__ __device__
+    int_type operator^=(int_type val)
+    {
+      return fetch_xor(val) + val;
+    }
+
+    __host__ __device__
+    int_type operator^=(int_type val) volatile
+    {
+      return fetch_xor(val) + val;
     }
 
   protected:
