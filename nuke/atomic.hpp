@@ -304,7 +304,7 @@ typename enable_if<
 atomic_fetch_xor(Integer32 *x, Integer32 y)
 {
 #if defined(__CUDA_ARCH__)
-  return atomicOr(x, y);
+  return atomicXor(x, y);
 #elif defined(__GNUC__)
   return __atomic_fetch_xor(x, y, __ATOMIC_SEQ_CST);
 #elif defined(_MSC_VER)
@@ -326,7 +326,7 @@ typename enable_if<
 atomic_fetch_xor(Integer64 *x, Integer64 y)
 {
 #if defined(__CUDA_ARCH__)
-  return atomicOr(x, y);
+  return atomicXor(x, y);
 #elif defined(__GNUC__)
   return __atomic_fetch_xor(x, y, __ATOMIC_SEQ_CST);
 #elif defined(_MSC_VER)
